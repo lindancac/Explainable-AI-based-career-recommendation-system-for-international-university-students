@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Your top five careers · Career Explorer{% endblock %}
+{% block content %}
+<p class="eyebrow">POSSIBILITIES TO EXPLORE</p><h1>Your top five career matches</h1>
+<p class="lead">{{ education }} · {{ subject }}</p>
+<p>Scores compare your answers with illustrative role profiles. They are not probabilities of employment or success. Similar scores are best explored together.</p>
+{% if empty_profile %}<p class="error" role="status">All ratings are zero. These rankings contain very little personal information; add your skills and interests for a more useful comparison.</p>{% endif %}
+<details class="method"><summary>How are these recommendations calculated?</summary><p>Match = 65% skill alignment + 30% interest alignment + 5% subject relevance. For each required skill, alignment is your rating divided by the illustrative target, capped at 100%; these values are averaged. Interest alignment averages relevant interest ratings out of five. Subject relevance is 100% for a listed related subject and 50% otherwise, recognising that career changes are possible. Education informs entry-route guidance and does not change the score. Ties follow catalogue order.</p><p>Role profiles and targets are manually authored examples, not measured occupational standards. This version uses a transparent rule-based method, not a trained machine-learning model.</p></details>
+<form method="post" action="{{ url_for('edit') }}" class="profile-actions">
+{% for key, value in profile.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+<button type="submit">Edit my answers / explore what if</button>
+<p class="note">Your current ratings will be retained. Change a rating and submit again to explore how the ranking changes.</p></form>
+<section class="career" aria-labelledby="compare-heading"><h2 id="compare-heading">Compare career options</h2><p>Choose two or three of your top five careers.</p>
+{% if comparison_error %}<p class="error" role="alert">{{ comparison_error }}</p>{% endif %}
+<form method="post" action="{{ url_for('recommend') }}" id="comparison-form">
+{% for key, value in profile.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+<fieldset><legend>Careers to compare</legend>{% for r in results %}<label class="comparison-choice"><input type="checkbox" name="career" value="{{ r.career }}" {% if r.career in selected %}checked{% endif %}> {{ r.career }} · {{ r.score }}%</label>{% endfor %}</fieldset>
+<button type="submit" formaction="/compare#comparison">Compare selected careers</button></form>
+{% if comparison %}<div id="comparison" class="table-scroll" tabindex="0" role="region" aria-label="Career comparison"><table><caption>Side-by-side career comparison</caption><thead><tr><th scope="col">Factor</th>{% for r in comparison %}<th scope="col">{{ r.career }}</th>{% endfor %}</tr></thead><tbody>
+<tr><th scope="row">Industry</th>{% for r in comparison %}<td>{{ r.industry }}</td>{% endfor %}</tr>
+<tr><th scope="row">Overall match</th>{% for r in comparison %}<td>{{ r.score }}%</td>{% endfor %}</tr>
+<tr><th scope="row">Skill alignment</th>{% for r in comparison %}<td>{{ r.skill_score }}%</td>{% endfor %}</tr>
+<tr><th scope="row">Interest alignment</th>{% for r in comparison %}<td>{{ r.interest_score }}%</td>{% endfor %}</tr>
+<tr><th scope="row">Relevant interests</th>{% for r in comparison %}<td>{% for i in r.interest_analysis %}{{ i.label }} ({{ i.value }}/5){% if not loop.last %}; {% endif %}{% endfor %}</td>{% endfor %}</tr>
+<tr><th scope="row">Skill gaps</th>{% for r in comparison %}<td>{% for g in r.gaps %}{{ g.label }}: {{ g.value }} → {{ g.target }}/5{% if not loop.last %}; {% endif %}{% else %}No gaps against these example targets.{% endfor %}</td>{% endfor %}</tr>
+<tr><th scope="row">Example activity</th>{% for r in comparison %}<td>{{ r.activity }}</td>{% endfor %}</tr>
+</tbody></table></div>{% endif %}</section>
+{% for r in results %}
+<section class="career">
+<p class="eyebrow">{{ loop.index }} / {{ results|length }} · {{ r.industry }}</p>
+<div class="head"><h2>{{ r.career }}</h2><div class="score"><strong>{{ r.score }}%</strong> match</div></div>
+<div class="meter" role="img" aria-label="Overall match {{ r.score }} percent"><span style="width: {{ r.score }}%"></span></div>
+<p>{{ r.description }}</p>
+<h3>Why this appears in your results</h3>
+<p>Your skill alignment is {{ r.skill_score }}% and interest alignment is {{ r.interest_score }}%. {% if r.subject_score == 100 %}Your subject is included among this example role’s related fields.{% else %}Your subject is outside the related fields listed in this example profile; this does not rule out the career.{% endif %}</p>
+{% if r.strengths %}<p>You meet the example skill targets for {% for s in r.strengths %}{{ s.label|lower }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
+<details><summary>Skill-match analysis · {{ r.skill_score }}%</summary>
+<table><caption>Your proficiency compared with example role targets</caption><thead><tr><th scope="col">Skill</th><th scope="col">You / 5</th><th scope="col">Target / 5</th></tr></thead><tbody>{% for s in r.skills %}<tr><th scope="row">{{ s.label }}</th><td>{{ s.value }}</td><td>{{ s.target }}</td></tr>{% endfor %}</tbody></table></details>
+<details><summary>Interest-match analysis · {{ r.interest_score }}%</summary><ul>{% for i in r.interest_analysis %}<li>{{ i.label }}: your interest is {{ i.value }}/5.</li>{% endfor %}</ul></details>
+<details><summary>Skill gaps and a next step</summary><ul>{% for g in r.gaps %}<li>{{ g.label }}: {{ g.value }}/5 → example target {{ g.target }}/5 (gap {{ g.target - g.value }}).</li>{% else %}<li>You meet all skill targets in this example profile. This does not assess full job readiness.</li>{% endfor %}</ul><p><b>Try this:</b> {{ r.activity }}</p></details>
+<details><summary>Your personal development plan</summary><p>Start with the largest gaps below. This is a suggested sequence, not a guaranteed timeline or qualification.</p><ol>{% for g in r.gaps[:3] %}<li><b>{{ g.label }} · {{ g.value }}/5 → example target {{ g.target }}/5</b><p>{{ g.activity }} Save an example of your work, ask a peer or tutor for feedback, then reassess your proficiency using the rating examples.</p></li>{% else %}<li>Extend your existing strengths through a portfolio task: {{ r.activity }} Ask for feedback on the outcome.</li>{% endfor %}<li>Review actual role descriptions with your careers adviser to identify requirements this example profile may omit.</li></ol></details>
+<details><summary>Career information and entry routes</summary><p>{{ r.education_note }}</p><p>Explore vacancies in {{ r.industry|lower }} to compare responsibilities and entry requirements. Role titles and requirements vary by employer and country. For international opportunities, check the destination’s official work-authorisation requirements and the employer’s eligibility criteria separately; this tool does not assess either.</p></details>
+</section>
+{% endfor %}
+<a class="button" href="{{ url_for('index') }}">Create a new profile</a><button class="secondary" type="button" onclick="window.print()">Print results</button>
+<p class="note">Use “Edit my answers” to keep your profile, or create a new profile to start with zero ratings. Answers are carried between forms and are not saved to a database.</p>
+{% endblock %}

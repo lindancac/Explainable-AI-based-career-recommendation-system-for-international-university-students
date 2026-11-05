@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="eyebrow">YOUR NEXT CHAPTER</p>
+<h1>Explore where your skills could take you.</h1>
+<p class="lead">A career exploration tool for international university students. Discover five options across industries and understand how each connects to your profile.</p>
+<p class="note">Illustrative research prototype · No account needed · Answers are not saved by this app</p>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="{{ url_for('recommend') }}">
+<fieldset><legend>1. Your education</legend>
+<label for="education">Current or most recent education level</label>
+<select id="education" name="education" required><option value="">Choose your education level</option>{% for item in education %}<option {% if values.get('education') == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+<label for="subject">Subject of study</label>
+<select id="subject" name="subject" required><option value="">Choose your subject area</option>{% for item in subjects %}<option {% if values.get('subject') == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select>
+</fieldset>
+{% for group, items in groups.items() %}
+<fieldset><legend>{{ loop.index + 1 }}. {{ group }}</legend>
+<p class="note">{% if group == 'Career interests' %}0 = no interest · 1 = slight · 2 = some · 3 = moderate · 4 = high · 5 = very high{% else %}0 = no experience · 1 = beginner · 2 = basic · 3 = intermediate · 4 = advanced · 5 = highly proficient. Use examples from study, work or everyday life.{% endif %}</p>
+{% for key, label in items %}
+<div class="row"><label for="{{ key }}">{{ label }}</label>
+<input type="range" id="{{ key }}" name="{{ key }}" min="0" max="5" step="1" value="{{ values.get(key, '0') }}" oninput="this.nextElementSibling.value=this.value" aria-label="{{ label }} rating" {% if key in guides %}aria-describedby="guide-{{ key }}"{% endif %}>
+<output for="{{ key }}">{{ values.get(key, '0') }}</output>
+{% if key in guides %}<details class="skill-guide" id="guide-{{ key }}"><summary>Examples for {{ label|lower }}</summary><p>1 · Beginner: {{ guides[key][0] }}</p><p>3 · Intermediate: {{ guides[key][1] }}</p><p>5 · Highly proficient: {{ guides[key][2] }}</p><p class="note">Use 2 or 4 when your experience falls between these examples; use 0 for no experience. These are reflection prompts, not a formal skills assessment.</p></details>{% endif %}</div>
+{% endfor %}</fieldset>
+{% endfor %}
+<button type="submit">Explore my top five careers →</button>
+</form>
+{% endblock %}
